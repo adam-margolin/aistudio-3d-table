@@ -1,0 +1,5 @@
+{
+  "name": "Move and resize: 3D Spreadsheet",
+  "description": "A professional 3D spreadsheet interface built with React Three Fiber.",
+  "requestFramePermissions": []
+}
