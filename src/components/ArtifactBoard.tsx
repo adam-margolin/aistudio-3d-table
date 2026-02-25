@@ -2,8 +2,10 @@ import { useRef, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { RoundedBox, Text, Html } from '@react-three/drei';
 import * as THREE from 'three';
+import { BarChart3, ScatterChart, Maximize2, Minimize2 } from 'lucide-react';
 import { Artifact, PlotData } from '../types';
 import { VisualizationStrategy } from '../App';
+import { Theme } from '../themes';
 
 interface ArtifactBoardProps {
   artifact: Artifact;
@@ -11,10 +13,11 @@ interface ArtifactBoardProps {
   inactiveIndex: number;
   onClick: () => void;
   strategy: VisualizationStrategy;
+  theme: Theme;
 }
 
 // A simple 3D Bar Chart
-function BarChart({ data, position, opacity = 1 }: { data: number[], position: [number, number, number], opacity?: number }) {
+function BarChart({ data, position, opacity = 1, theme }: { data: number[], position: [number, number, number], opacity?: number, theme: Theme }) {
   const maxVal = Math.max(...data, 1);
   const barWidth = 0.2;
   const gap = 0.05;
@@ -28,7 +31,7 @@ function BarChart({ data, position, opacity = 1 }: { data: number[], position: [
         return (
           <group key={i} position={[startX + i * (barWidth + gap), height / 2, 0]}>
             <RoundedBox args={[barWidth, height, barWidth]} radius={0.02} castShadow receiveShadow>
-              <meshStandardMaterial color="#3b82f6" roughness={0.4} metalness={0.8} transparent opacity={opacity} />
+              <meshStandardMaterial color={theme.accent} roughness={0.4} metalness={0.8} transparent opacity={opacity} />
             </RoundedBox>
           </group>
         );
@@ -38,7 +41,7 @@ function BarChart({ data, position, opacity = 1 }: { data: number[], position: [
 }
 
 // A simple 3D Scatter Plot
-function ScatterPlot({ data, position, opacity = 1 }: { data: number[], position: [number, number, number], opacity?: number }) {
+function ScatterPlot({ data, position, opacity = 1, theme }: { data: number[], position: [number, number, number], opacity?: number, theme: Theme }) {
   const maxVal = Math.max(...data, 1);
   const width = 2.5;
   const height = 2;
@@ -49,11 +52,11 @@ function ScatterPlot({ data, position, opacity = 1 }: { data: number[], position
       {/* Axes */}
       <mesh position={[0, 0, 0]}>
         <boxGeometry args={[width + 0.2, 0.02, 0.02]} />
-        <meshStandardMaterial color="#64748b" transparent opacity={opacity} />
+        <meshStandardMaterial color={theme.textHeader} transparent opacity={opacity} />
       </mesh>
       <mesh position={[startX, height / 2, 0]}>
         <boxGeometry args={[0.02, height + 0.2, 0.02]} />
-        <meshStandardMaterial color="#64748b" transparent opacity={opacity} />
+        <meshStandardMaterial color={theme.textHeader} transparent opacity={opacity} />
       </mesh>
 
       {/* Points */}
@@ -63,7 +66,7 @@ function ScatterPlot({ data, position, opacity = 1 }: { data: number[], position
         return (
           <mesh key={i} position={[x, y, 0]} castShadow>
             <sphereGeometry args={[0.08, 16, 16]} />
-            <meshStandardMaterial color="#10b981" roughness={0.2} metalness={0.5} transparent opacity={opacity} />
+            <meshStandardMaterial color={theme.accent} roughness={0.2} metalness={0.5} transparent opacity={opacity} />
           </mesh>
         );
       })}
@@ -71,7 +74,7 @@ function ScatterPlot({ data, position, opacity = 1 }: { data: number[], position
   );
 }
 
-function PlotViewer({ plots, activeIndex, onSelect, isActive, isExpanded, onToggleExpand, boardHeight }: { plots: PlotData[], activeIndex: number, onSelect: (idx: number) => void, isActive: boolean, isExpanded: boolean, onToggleExpand: () => void, boardHeight: number }) {
+function PlotViewer({ plots, activeIndex, onSelect, isActive, isExpanded, onToggleExpand, boardHeight, theme }: { plots: PlotData[], activeIndex: number, onSelect: (idx: number) => void, isActive: boolean, isExpanded: boolean, onToggleExpand: () => void, boardHeight: number, theme: Theme }) {
   const activePlot = plots[activeIndex];
   const [page, setPage] = useState(0);
 
@@ -108,7 +111,7 @@ function PlotViewer({ plots, activeIndex, onSelect, isActive, isExpanded, onTogg
                 <Text
                   position={[0, 2.2, 0]}
                   fontSize={0.2}
-                  color="#f8fafc"
+                  color={theme.textData}
                   anchorX="center"
                   anchorY="bottom"
                 >
@@ -116,9 +119,9 @@ function PlotViewer({ plots, activeIndex, onSelect, isActive, isExpanded, onTogg
                 </Text>
                 
                 {plot.type === 'bar' ? (
-                  <BarChart data={plot.data} position={[0, 0, 0]} />
+                  <BarChart data={plot.data} position={[0, 0, 0]} theme={theme} />
                 ) : (
-                  <ScatterPlot data={plot.data} position={[0, 0, 0]} />
+                  <ScatterPlot data={plot.data} position={[0, 0, 0]} theme={theme} />
                 )}
               </group>
             );
@@ -126,27 +129,48 @@ function PlotViewer({ plots, activeIndex, onSelect, isActive, isExpanded, onTogg
 
           {/* Pagination Controls in 3D Space */}
           {totalPages > 1 && (
-            <Html position={[-1.5, -3.5, 0]} transform center zIndexRange={[100, 0]}>
-              <div className="flex items-center gap-4 bg-slate-900/80 p-2 rounded-full border border-slate-700/50 backdrop-blur-md pointer-events-auto">
-                <button
-                  onClick={(e) => { e.stopPropagation(); setPage(Math.max(0, page - 1)); }}
-                  disabled={page === 0}
-                  className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-800 text-white hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors pointer-events-auto"
+            <group position={[-1.5, -3.5, 0.1]}>
+              <RoundedBox args={[3, 0.6, 0.05]} radius={0.3} position={[0, 0, 0]}>
+                <meshPhysicalMaterial color={theme.uiBackground} transparent opacity={0.9} roughness={0.2} metalness={0.8} />
+              </RoundedBox>
+              
+              {/* Prev Button */}
+              <group position={[-1, 0, 0.03]}>
+                <RoundedBox 
+                  args={[0.5, 0.5, 0.02]} 
+                  radius={0.25}
+                  onClick={(e) => { e.stopPropagation(); if (page > 0) setPage(page - 1); }}
+                  onPointerOver={() => document.body.style.cursor = page > 0 ? 'pointer' : 'auto'}
+                  onPointerOut={() => document.body.style.cursor = 'auto'}
                 >
+                  <meshStandardMaterial color={page === 0 ? theme.container : theme.uiBorder} />
+                </RoundedBox>
+                <Text position={[0, 0, 0.02]} fontSize={0.2} color={page === 0 ? theme.textHeader : theme.textData} anchorX="center" anchorY="middle">
                   ←
-                </button>
-                <span className="text-slate-300 text-sm font-medium">
-                  Page {page + 1} of {totalPages}
-                </span>
-                <button
-                  onClick={(e) => { e.stopPropagation(); setPage(Math.min(totalPages - 1, page + 1)); }}
-                  disabled={page === totalPages - 1}
-                  className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-800 text-white hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors pointer-events-auto"
+                </Text>
+              </group>
+
+              {/* Text */}
+              <Text position={[0, 0, 0.03]} fontSize={0.15} color={theme.textData} anchorX="center" anchorY="middle">
+                {`Page ${page + 1} of ${totalPages}`}
+              </Text>
+
+              {/* Next Button */}
+              <group position={[1, 0, 0.03]}>
+                <RoundedBox 
+                  args={[0.5, 0.5, 0.02]} 
+                  radius={0.25}
+                  onClick={(e) => { e.stopPropagation(); if (page < totalPages - 1) setPage(page + 1); }}
+                  onPointerOver={() => document.body.style.cursor = page < totalPages - 1 ? 'pointer' : 'auto'}
+                  onPointerOut={() => document.body.style.cursor = 'auto'}
                 >
+                  <meshStandardMaterial color={page === totalPages - 1 ? theme.container : theme.uiBorder} />
+                </RoundedBox>
+                <Text position={[0, 0, 0.02]} fontSize={0.2} color={page === totalPages - 1 ? theme.textHeader : theme.textData} anchorX="center" anchorY="middle">
                   →
-                </button>
-              </div>
-            </Html>
+                </Text>
+              </group>
+            </group>
           )}
         </group>
       ) : (
@@ -154,7 +178,7 @@ function PlotViewer({ plots, activeIndex, onSelect, isActive, isExpanded, onTogg
           <Text
             position={[0, 2.2, 0]}
             fontSize={0.2}
-            color="#f8fafc"
+            color={theme.textData}
             anchorX="center"
             anchorY="bottom"
           >
@@ -162,51 +186,84 @@ function PlotViewer({ plots, activeIndex, onSelect, isActive, isExpanded, onTogg
           </Text>
           
           {activePlot.type === 'bar' ? (
-            <BarChart data={activePlot.data} position={[0, 0, 0]} />
+            <BarChart data={activePlot.data} position={[0, 0, 0]} theme={theme} />
           ) : (
-            <ScatterPlot data={activePlot.data} position={[0, 0, 0]} />
+            <ScatterPlot data={activePlot.data} position={[0, 0, 0]} theme={theme} />
           )}
         </group>
       )}
 
       {/* Tabs / Buttons UI - Only show when the board is active */}
       {isActive && (
-        <Html position={[isExpanded ? -1.5 : 0, -boardHeight / 2 + 0.6 - viewerPosition[1], 0]} transform center zIndexRange={[100, 0]}>
-          <div className="flex flex-wrap justify-center gap-2 bg-slate-900/80 p-2 rounded-xl border border-slate-700/50 backdrop-blur-md w-max max-w-[800px] pointer-events-auto">
-            {!isExpanded && plots.map((plot, i) => {
-              const isPlotActive = i === activeIndex;
-              return (
-                <button
-                  key={plot.id}
+        <group position={[isExpanded ? -1.5 : 0, -boardHeight / 2 + 0.6 - viewerPosition[1], 0.1]}>
+          {/* Background */}
+          <RoundedBox 
+            args={[isExpanded ? 2.5 : Math.max(3, plots.length * 1.5 + 0.5), isExpanded ? 0.6 : 1.2, 0.05]} 
+            radius={0.1} 
+            position={[0, 0, 0]}
+          >
+            <meshPhysicalMaterial color={theme.uiBackground} transparent opacity={0.9} roughness={0.2} metalness={0.8} />
+          </RoundedBox>
+
+          {!isExpanded && plots.map((plot, i) => {
+            const isPlotActive = i === activeIndex;
+            const totalWidth = plots.length * 1.5;
+            const startX = -totalWidth / 2 + 0.75;
+            const xOffset = startX + i * 1.5;
+            
+            return (
+              <group key={plot.id} position={[xOffset, 0.2, 0.03]}>
+                <RoundedBox 
+                  args={[1.4, 0.4, 0.02]} 
+                  radius={0.05} 
                   onClick={(e) => { e.stopPropagation(); onSelect(i); }}
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-all pointer-events-auto ${
-                    isPlotActive 
-                      ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' 
-                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
-                  }`}
+                  onPointerOver={() => document.body.style.cursor = 'pointer'}
+                  onPointerOut={() => document.body.style.cursor = 'auto'}
                 >
-                  {/* Simple icon based on type */}
-                  <span className="opacity-80">
-                    {plot.type === 'bar' ? '📊' : '📈'}
-                  </span>
-                  {plot.title}
-                </button>
-              );
-            })}
-            <button
+                  <meshStandardMaterial color={isPlotActive ? theme.accent : theme.container} />
+                </RoundedBox>
+                <Text
+                  position={[0, 0, 0.02]}
+                  fontSize={0.12}
+                  color={isPlotActive ? "#ffffff" : theme.textData}
+                  anchorX="center"
+                  anchorY="middle"
+                >
+                  {plot.type === 'bar' ? '📊 ' : '📈 '}
+                  {plot.title.length > 12 ? plot.title.substring(0, 12) + '...' : plot.title}
+                </Text>
+              </group>
+            );
+          })}
+
+          {/* Expand/Collapse Button */}
+          <group position={[0, isExpanded ? 0 : -0.3, 0.03]}>
+            <RoundedBox 
+              args={[2, 0.35, 0.02]} 
+              radius={0.05}
               onClick={(e) => { e.stopPropagation(); onToggleExpand(); }}
-              className="flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-bold transition-all bg-slate-100 text-slate-900 hover:bg-white shadow-lg pointer-events-auto"
+              onPointerOver={() => document.body.style.cursor = 'pointer'}
+              onPointerOut={() => document.body.style.cursor = 'auto'}
             >
-              {isExpanded ? 'Collapse Grid' : 'Expand Grid'}
-            </button>
-          </div>
-        </Html>
+              <meshStandardMaterial color={theme.uiBorder} />
+            </RoundedBox>
+            <Text
+              position={[0, 0, 0.02]}
+              fontSize={0.12}
+              color={theme.textData}
+              anchorX="center"
+              anchorY="middle"
+            >
+              {isExpanded ? '↙ Collapse Grid' : '↗ Expand Grid'}
+            </Text>
+          </group>
+        </group>
       )}
     </group>
   );
 }
 
-export function ArtifactBoard({ artifact, isActive, inactiveIndex, onClick, strategy }: ArtifactBoardProps) {
+export function ArtifactBoard({ artifact, isActive, inactiveIndex, onClick, strategy, theme }: ArtifactBoardProps) {
   const groupRef = useRef<THREE.Group>(null);
   const materialRef = useRef<THREE.MeshPhysicalMaterial>(null);
   const [activePlotIndex, setActivePlotIndex] = useState(0);
@@ -324,13 +381,16 @@ export function ArtifactBoard({ artifact, isActive, inactiveIndex, onClick, stra
       <RoundedBox args={[targetWidth, targetHeight, 0.1]} radius={0.1} castShadow receiveShadow>
         <meshPhysicalMaterial
           ref={materialRef}
-          color="#0f172a"
-          transparent
-          opacity={0}
-          roughness={0.2}
-          metalness={0.8}
-          clearcoat={1}
+          color={theme.container}
+          metalness={0.1}
+          roughness={0.4}
+          transmission={0.9}
+          thickness={0.5}
+          ior={1.5}
+          clearcoat={1.0}
           clearcoatRoughness={0.1}
+          transparent={true}
+          opacity={0} // Keep opacity at 0 here, it is animated in useFrame
         />
       </RoundedBox>
 
@@ -341,7 +401,7 @@ export function ArtifactBoard({ artifact, isActive, inactiveIndex, onClick, stra
             <Text
               position={[0, 0.5, 0]}
               fontSize={0.4}
-              color="#3b82f6"
+              color={theme.accent}
               anchorX="center"
               anchorY="middle"
             >
@@ -350,17 +410,17 @@ export function ArtifactBoard({ artifact, isActive, inactiveIndex, onClick, stra
             {/* Progress Bar Background */}
             <mesh position={[0, -0.5, 0]}>
               <planeGeometry args={[4, 0.2]} />
-              <meshBasicMaterial color="#1e293b" />
+              <meshBasicMaterial color={theme.container} />
             </mesh>
             {/* Progress Bar Fill */}
             <mesh position={[-2 + (4 * (artifact.progress || 0)) / 2, -0.5, 0.01]}>
               <planeGeometry args={[4 * (artifact.progress || 0), 0.2]} />
-              <meshBasicMaterial color="#3b82f6" />
+              <meshBasicMaterial color={theme.accent} />
             </mesh>
             <Text
               position={[0, -1, 0]}
               fontSize={0.2}
-              color="#94a3b8"
+              color={theme.textHeader}
               anchorX="center"
               anchorY="middle"
             >
@@ -371,7 +431,7 @@ export function ArtifactBoard({ artifact, isActive, inactiveIndex, onClick, stra
           <Text
             position={[0, 0, 0]}
             fontSize={0.6}
-            color={hovered ? "#ffffff" : "#cbd5e1"}
+            color={hovered ? theme.textData : theme.textHeader}
             anchorX="center"
             anchorY="middle"
           >
@@ -383,7 +443,7 @@ export function ArtifactBoard({ artifact, isActive, inactiveIndex, onClick, stra
             <Text
               position={[-targetWidth / 2 + 0.3, targetHeight / 2 - 0.4, 0]}
               fontSize={0.3}
-              color="#f8fafc"
+              color={theme.textData}
               anchorX="left"
               anchorY="top"
             >
@@ -394,7 +454,7 @@ export function ArtifactBoard({ artifact, isActive, inactiveIndex, onClick, stra
             <Text
               position={[-targetWidth / 2 + 0.3, targetHeight / 2 - 1.1, 0]}
               fontSize={0.15}
-              color="#cbd5e1"
+              color={theme.textHeader}
               anchorX="left"
               anchorY="top"
               maxWidth={2.5}
@@ -413,6 +473,7 @@ export function ArtifactBoard({ artifact, isActive, inactiveIndex, onClick, stra
                 isExpanded={expanded}
                 onToggleExpand={() => setIsExpanded(!isExpanded)}
                 boardHeight={targetHeight}
+                theme={theme}
               />
             )}
           </>
