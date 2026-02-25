@@ -4,6 +4,7 @@ import { Spreadsheet } from './Spreadsheet';
 import { ArtifactBoard } from './ArtifactBoard';
 import { Artifact, PlotData } from '../types';
 import { VisualizationStrategy, InteractionStrategy, ProgressStrategy } from '../App';
+import { Theme } from '../themes';
 
 // Mock Data Generator
 const generateMockArtifact = (id: string, type?: string): Artifact => {
@@ -65,9 +66,10 @@ interface SceneProps {
   interactionStrategy: InteractionStrategy;
   progressStrategy: ProgressStrategy;
   onRunAlgorithm: () => void;
+  theme: Theme;
 }
 
-export function Scene({ triggerRun, strategy, interactionStrategy, progressStrategy, onRunAlgorithm }: SceneProps) {
+export function Scene({ triggerRun, strategy, interactionStrategy, progressStrategy, onRunAlgorithm, theme }: SceneProps) {
   const [artifacts, setArtifacts] = useState<Artifact[]>([]);
   const [activeArtifactId, setActiveArtifactId] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -126,7 +128,7 @@ export function Scene({ triggerRun, strategy, interactionStrategy, progressStrat
 
   return (
     <>
-      <color attach="background" args={['#0B0E14']} />
+      <color attach="background" args={[theme.background]} />
       
       {/* Lighting */}
       <ambientLight intensity={0.4} />
@@ -138,7 +140,7 @@ export function Scene({ triggerRun, strategy, interactionStrategy, progressStrat
       >
         <orthographicCamera attach="shadow-camera" args={[-10, 10, 10, -10, 0.1, 50]} />
       </directionalLight>
-      <pointLight position={[-10, 10, -10]} intensity={0.5} color="#3b82f6" />
+      <pointLight position={[-10, 10, -10]} intensity={0.5} color={theme.accent} />
       
       {/* Environment for reflections */}
       <Environment preset="city" />
@@ -146,11 +148,11 @@ export function Scene({ triggerRun, strategy, interactionStrategy, progressStrat
       {/* Floor Plane */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -2, 0]} receiveShadow>
         <planeGeometry args={[100, 100]} />
-        <meshStandardMaterial color="#0B0E14" roughness={0.8} metalness={0.2} />
+        <meshStandardMaterial color={theme.floorplane} roughness={0.8} metalness={0.2} />
       </mesh>
       
       {/* Grid helper for a professional tech look */}
-      <gridHelper args={[100, 100, 0x1f2937, 0x111827]} position={[0, -1.99, 0]} />
+      <gridHelper args={[100, 100, theme.grid, theme.grid]} position={[0, -1.99, 0]} />
 
       {/* Contact Shadows for realism */}
       <ContactShadows
@@ -169,6 +171,7 @@ export function Scene({ triggerRun, strategy, interactionStrategy, progressStrat
         interactionStrategy={interactionStrategy} 
         onRunAlgorithm={runAlgorithm}
         isProcessing={isProcessing && progressStrategy === 'spreadsheet-overlay'}
+        theme={theme}
       />
 
       {/* Artifact Boards */}
@@ -185,6 +188,7 @@ export function Scene({ triggerRun, strategy, interactionStrategy, progressStrat
             inactiveIndex={inactiveIndex}
             onClick={() => handleArtifactClick(artifact.id)}
             strategy={strategy}
+            theme={theme}
           />
         );
       })}

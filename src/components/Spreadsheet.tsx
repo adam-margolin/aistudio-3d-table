@@ -2,15 +2,17 @@ import { useRef, useMemo, useState, useEffect } from 'react';
 import { RoundedBox, Text, Html } from '@react-three/drei';
 import * as THREE from 'three';
 import { InteractionStrategy } from '../App';
+import { Theme } from '../themes';
 
 interface SpreadsheetProps {
   position?: [number, number, number];
   interactionStrategy?: InteractionStrategy;
   onRunAlgorithm?: (type: string) => void;
   isProcessing?: boolean;
+  theme: Theme;
 }
 
-export function Spreadsheet({ position = [-6, 0, 0], interactionStrategy = 'ui-overlay', onRunAlgorithm, isProcessing }: SpreadsheetProps) {
+export function Spreadsheet({ position = [-6, 0, 0], interactionStrategy = 'ui-overlay', onRunAlgorithm, isProcessing, theme }: SpreadsheetProps) {
   const containerRef = useRef<THREE.Group>(null);
   const [contextMenu, setContextMenu] = useState<{ x: number, y: number } | null>(null);
 
@@ -185,9 +187,9 @@ export function Spreadsheet({ position = [-6, 0, 0], interactionStrategy = 'ui-o
     e.target.releasePointerCapture(e.pointerId);
   };
 
-  const topMargin = 0.4;
-  const containerWidth = currentWidth + 0.1;
-  const containerHeight = currentHeight + 0.1 + topMargin;
+  const topMargin = 0.2;
+  const containerWidth = currentWidth + 0.5;
+  const containerHeight = currentHeight + 0.5 + topMargin;
   const containerDepth = 0.1;
 
   // Center the container so its bottom edge is on the floor (y=0)
@@ -230,11 +232,13 @@ export function Spreadsheet({ position = [-6, 0, 0], interactionStrategy = 'ui-o
         const isHeader = isHeaderRow || isHeaderCol;
 
         // Determine color based on row and whether it's a header
-        let color = '#1e293b'; // slate-800
+        let color = theme.dataCellEven;
         if (isHeader) {
-          color = '#334155'; // slate-700
+          color = theme.headerCell;
         } else if (r % 2 === 0) {
-          color = '#0f172a'; // slate-900
+          color = theme.dataCellEven;
+        } else {
+          color = theme.dataCellOdd;
         }
 
         // Determine text and alignment
@@ -272,7 +276,7 @@ export function Spreadsheet({ position = [-6, 0, 0], interactionStrategy = 'ui-o
       }
     }
     return items;
-  }, [cols, rows, cellWidth, cellHeight, cellDepth, gap, currentWidth, currentHeight, containerDepth, cellData, topMargin]);
+  }, [cols, rows, cellWidth, cellHeight, cellDepth, gap, currentWidth, currentHeight, containerDepth, cellData, topMargin, theme]);
 
   // Handle global click to close context menu
   useEffect(() => {
@@ -317,36 +321,58 @@ export function Spreadsheet({ position = [-6, 0, 0], interactionStrategy = 'ui-o
       onContextMenu={handleContextMenu}
     >
       {/* Toggle Mode */}
-      <Html position={[0, containerHeight / 2 - topMargin / 2, containerDepth / 2 + 0.02]} transform center>
-        <div className="flex gap-2 bg-slate-800 p-1 rounded-lg pointer-events-auto border border-slate-700/50 shadow-lg">
-          <button 
-            className={`px-3 py-1 text-xs font-medium rounded transition-colors ${mode === 'resize' ? 'bg-blue-500 text-white' : 'text-slate-300 hover:bg-slate-700'}`}
+      <group position={[0, containerHeight / 2 - 0.1, containerDepth / 2 + 0.01]}>
+        {/* Background */}
+        <RoundedBox args={[0.8, 0.15, 0.01]} radius={0.02} position={[0, 0, 0]}>
+          <meshStandardMaterial color="#1e293b" />
+        </RoundedBox>
+        
+        {/* Resize Button */}
+        <group position={[-0.2, 0, 0.006]}>
+          <RoundedBox 
+            args={[0.36, 0.11, 0.01]} 
+            radius={0.015}
             onClick={(e) => { 
               e.stopPropagation(); 
               setMode('resize'); 
               setClipWidth(null); 
               setClipHeight(null); 
             }}
+            onPointerOver={() => document.body.style.cursor = 'pointer'}
+            onPointerOut={() => document.body.style.cursor = 'auto'}
           >
+            <meshStandardMaterial color={mode === 'resize' ? "#3b82f6" : "#334155"} />
+          </RoundedBox>
+          <Text position={[0, 0, 0.01]} fontSize={0.05} color={mode === 'resize' ? "#ffffff" : "#cbd5e1"} anchorX="center" anchorY="middle">
             Resize
-          </button>
-          <button 
-            className={`px-3 py-1 text-xs font-medium rounded transition-colors ${mode === 'clip' ? 'bg-blue-500 text-white' : 'text-slate-300 hover:bg-slate-700'}`}
+          </Text>
+        </group>
+
+        {/* Clip Button */}
+        <group position={[0.2, 0, 0.006]}>
+          <RoundedBox 
+            args={[0.36, 0.11, 0.01]} 
+            radius={0.015}
             onClick={(e) => { 
               e.stopPropagation(); 
               setMode('clip'); 
               setClipWidth(currentWidth); 
               setClipHeight(currentHeight); 
             }}
+            onPointerOver={() => document.body.style.cursor = 'pointer'}
+            onPointerOut={() => document.body.style.cursor = 'auto'}
           >
+            <meshStandardMaterial color={mode === 'clip' ? "#3b82f6" : "#334155"} />
+          </RoundedBox>
+          <Text position={[0, 0, 0.01]} fontSize={0.05} color={mode === 'clip' ? "#ffffff" : "#cbd5e1"} anchorX="center" anchorY="middle">
             Clip
-          </button>
-        </div>
-      </Html>
+          </Text>
+        </group>
+      </group>
 
       {/* Drag Indicator */}
-      <group position={[0, containerHeight / 2 - topMargin / 2, containerDepth / 2 + 0.001]}>
-        <RoundedBox args={[0.6, 0.04, 0.01]} radius={0.02} smoothness={2}>
+      <group position={[0, containerHeight / 2 - 0.05, containerDepth / 2 + 0.001]}>
+        <RoundedBox args={[0.2, 0.015, 0.01]} radius={0.0075} smoothness={2}>
           <meshStandardMaterial color={isDragging ? "#60a5fa" : "#475569"} />
         </RoundedBox>
       </group>
@@ -373,24 +399,29 @@ export function Spreadsheet({ position = [-6, 0, 0], interactionStrategy = 'ui-o
         receiveShadow
       >
         <meshPhysicalMaterial
-          color="#0f172a"
-          metalness={0.6}
-          roughness={0.2}
-          clearcoat={0.5}
-          clearcoatRoughness={0.2}
+          color={theme.container}
+          metalness={0.1}
+          roughness={0.4}
+          transmission={0.9}
+          thickness={0.5}
+          ior={1.5}
+          clearcoat={1.0}
+          clearcoatRoughness={0.1}
+          transparent={true}
+          opacity={1}
         />
       </RoundedBox>
 
       {/* Resize Handle */}
       <mesh
-        position={[containerWidth / 2 - 0.05, -containerHeight / 2 + 0.05, containerDepth / 2 + 0.01]}
+        position={[containerWidth / 2 - 0.02, -containerHeight / 2 + 0.02, containerDepth / 2 + 0.01]}
         onPointerDown={handleResizePointerDown}
         onPointerMove={handleResizePointerMove}
         onPointerUp={handleResizePointerUp}
         onPointerOver={() => setIsHoveringResize(true)}
         onPointerOut={() => setIsHoveringResize(false)}
       >
-        <boxGeometry args={[0.1, 0.1, 0.02]} />
+        <boxGeometry args={[0.04, 0.04, 0.02]} />
         <meshStandardMaterial color={isResizing ? "#60a5fa" : "#475569"} />
       </mesh>
 
@@ -416,7 +447,7 @@ export function Spreadsheet({ position = [-6, 0, 0], interactionStrategy = 'ui-o
             <Text
               position={[cell.textX, 0, cellDepth / 2 + 0.005]}
               fontSize={0.035}
-              color={cell.isHeader ? '#94a3b8' : '#f8fafc'}
+              color={cell.isHeader ? theme.textHeader : theme.textData}
               anchorX={cell.align}
               anchorY="middle"
             >
@@ -429,9 +460,15 @@ export function Spreadsheet({ position = [-6, 0, 0], interactionStrategy = 'ui-o
       {/* Processing Indicator */}
       {isProcessing && (
         <Html position={[0, 0, containerDepth / 2 + 0.1]} transform center zIndexRange={[100, 0]}>
-          <div className="flex flex-col items-center justify-center gap-3 bg-slate-900/90 p-6 rounded-xl border border-blue-500/50 shadow-2xl shadow-blue-500/20 backdrop-blur-md">
-            <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-            <p className="text-white font-medium text-sm">Processing Data...</p>
+          <div 
+            className="flex flex-col items-center justify-center gap-3 p-6 rounded-xl border shadow-2xl backdrop-blur-md"
+            style={{ backgroundColor: theme.uiBackground, borderColor: theme.uiBorder, boxShadow: `0 25px 50px -12px ${theme.accent}33` }}
+          >
+            <div 
+              className="w-8 h-8 border-4 border-t-transparent rounded-full animate-spin"
+              style={{ borderColor: theme.accent, borderTopColor: 'transparent' }}
+            ></div>
+            <p className="font-medium text-sm" style={{ color: theme.uiText }}>Processing Data...</p>
           </div>
         </Html>
       )}
@@ -447,34 +484,47 @@ export function Spreadsheet({ position = [-6, 0, 0], interactionStrategy = 'ui-o
           zIndexRange={[100, 0]}
         >
           <div 
-            className="bg-slate-900/95 backdrop-blur-md border border-slate-700/80 rounded-lg shadow-2xl p-2 w-56 flex flex-col gap-1 pointer-events-auto"
+            className="backdrop-blur-md border rounded-lg shadow-2xl p-2 w-56 flex flex-col gap-1 pointer-events-auto"
+            style={{ backgroundColor: theme.uiBackground, borderColor: theme.uiBorder }}
             onClick={(e) => e.stopPropagation()}
             onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); }}
           >
-            <div className="px-3 py-1.5 border-b border-slate-700/50 mb-1">
-              <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Run Algorithm</span>
+            <div className="px-3 py-1.5 border-b mb-1" style={{ borderColor: theme.uiBorder }}>
+              <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: theme.textHeader }}>Run Algorithm</span>
             </div>
             <button 
               onClick={() => handleRun('Descriptive Stats')}
-              className="text-left px-3 py-2 text-sm text-slate-200 hover:bg-blue-600 hover:text-white rounded-md transition-colors flex items-center gap-2"
+              className="text-left px-3 py-2 text-sm rounded-md transition-colors flex items-center gap-2"
+              style={{ color: theme.uiText }}
+              onMouseOver={(e) => { e.currentTarget.style.backgroundColor = theme.accent; e.currentTarget.style.color = '#fff'; }}
+              onMouseOut={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = theme.uiText; }}
             >
               <span>📊</span> Descriptive Statistics
             </button>
             <button 
               onClick={() => handleRun('Linear Regression')}
-              className="text-left px-3 py-2 text-sm text-slate-200 hover:bg-blue-600 hover:text-white rounded-md transition-colors flex items-center gap-2"
+              className="text-left px-3 py-2 text-sm rounded-md transition-colors flex items-center gap-2"
+              style={{ color: theme.uiText }}
+              onMouseOver={(e) => { e.currentTarget.style.backgroundColor = theme.accent; e.currentTarget.style.color = '#fff'; }}
+              onMouseOut={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = theme.uiText; }}
             >
               <span>📈</span> Linear Regression
             </button>
             <button 
               onClick={() => handleRun('Clustering')}
-              className="text-left px-3 py-2 text-sm text-slate-200 hover:bg-blue-600 hover:text-white rounded-md transition-colors flex items-center gap-2"
+              className="text-left px-3 py-2 text-sm rounded-md transition-colors flex items-center gap-2"
+              style={{ color: theme.uiText }}
+              onMouseOver={(e) => { e.currentTarget.style.backgroundColor = theme.accent; e.currentTarget.style.color = '#fff'; }}
+              onMouseOut={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = theme.uiText; }}
             >
               <span>🎯</span> Clustering
             </button>
             <button 
               onClick={() => handleRun('Time Series')}
-              className="text-left px-3 py-2 text-sm text-slate-200 hover:bg-blue-600 hover:text-white rounded-md transition-colors flex items-center gap-2"
+              className="text-left px-3 py-2 text-sm rounded-md transition-colors flex items-center gap-2"
+              style={{ color: theme.uiText }}
+              onMouseOver={(e) => { e.currentTarget.style.backgroundColor = theme.accent; e.currentTarget.style.color = '#fff'; }}
+              onMouseOut={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = theme.uiText; }}
             >
               <span>📉</span> Time Series
             </button>
