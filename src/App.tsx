@@ -42,13 +42,13 @@ class ErrorBoundary extends Component<Props, State> {
 
 export type VisualizationStrategy = 'spatial-sidebar' | 'background-tabs' | 'spatial-grouping';
 export type InteractionStrategy = 'ui-overlay' | 'contextual-menu';
-export type ProgressStrategy = 'spreadsheet-overlay' | 'artifact-streaming';
+export type ProgressStrategy = 'none' | 'spreadsheet-overlay' | 'artifact-streaming';
 
 export default function App() {
   const [triggerRun, setTriggerRun] = useState<number>(0);
   const [strategy, setStrategy] = useState<VisualizationStrategy>('spatial-sidebar');
   const [interactionStrategy, setInteractionStrategy] = useState<InteractionStrategy>('ui-overlay');
-  const [progressStrategy, setProgressStrategy] = useState<ProgressStrategy>('spreadsheet-overlay');
+  const [progressStrategy, setProgressStrategy] = useState<ProgressStrategy>('none');
   const [themeId, setThemeId] = useState<string>('blue-purple');
 
   const currentTheme = themes.find(t => t.id === themeId) || themes[0];
@@ -65,12 +65,12 @@ export default function App() {
           shadows
           gl={{ antialias: true, localClippingEnabled: true }}
         >
-          <Scene 
-            triggerRun={triggerRun} 
-            strategy={strategy} 
-            interactionStrategy={interactionStrategy} 
+          <Scene
+            triggerRun={triggerRun}
+            strategy={strategy}
+            interactionStrategy={interactionStrategy}
             progressStrategy={progressStrategy}
-            onRunAlgorithm={handleRun} 
+            onRunAlgorithm={handleRun}
             theme={currentTheme}
           />
         </Canvas>
@@ -78,23 +78,23 @@ export default function App() {
 
       {/* 2D UI Overlay */}
       <div className="absolute bottom-8 right-8 z-10">
-        <div 
+        <div
           className="flex flex-col gap-4 backdrop-blur-md p-6 rounded-2xl shadow-2xl w-80 max-h-[80vh] overflow-y-auto"
           style={{ backgroundColor: currentTheme.uiBackground, color: currentTheme.uiText, border: '1px solid ' + currentTheme.uiBorder }}
         >
           <h2 className="font-semibold text-lg" style={{ color: currentTheme.textHeader }}>Analysis Tools</h2>
           <p className="text-sm" style={{ color: currentTheme.textData }}>Select data from the spreadsheet and run an algorithm.</p>
-          
+
           {interactionStrategy === 'ui-overlay' ? (
             <div className="flex flex-col gap-2 mt-2">
-              <button 
+              <button
                 onClick={handleRun}
                 className="px-4 py-2 text-white rounded-lg font-medium transition-colors shadow-lg"
                 style={{ backgroundColor: currentTheme.accent, boxShadow: `0 10px 15px -3px ${currentTheme.accent}33` }}
               >
                 Run Descriptive Stats
               </button>
-              <button 
+              <button
                 onClick={handleRun}
                 className="px-4 py-2 rounded-lg font-medium transition-colors border"
                 style={{ backgroundColor: currentTheme.container, color: currentTheme.textData, borderColor: currentTheme.uiBorder }}
@@ -112,13 +112,13 @@ export default function App() {
 
           <div className="flex flex-col gap-2 mt-4 pt-4 border-t" style={{ borderColor: currentTheme.uiBorder }}>
             <h3 className="font-semibold text-sm" style={{ color: currentTheme.textHeader }}>Theme</h3>
-            <select 
-              value={themeId} 
+            <select
+              value={themeId}
               onChange={(e) => setThemeId(e.target.value)}
               className="w-full p-2 rounded-lg border text-sm focus:outline-none focus:ring-2"
-              style={{ 
-                backgroundColor: currentTheme.container, 
-                color: currentTheme.textData, 
+              style={{
+                backgroundColor: currentTheme.container,
+                color: currentTheme.textData,
                 borderColor: currentTheme.uiBorder,
                 outlineColor: currentTheme.accent
               }}
@@ -132,11 +132,11 @@ export default function App() {
           <div className="flex flex-col gap-2 mt-4 pt-4 border-t" style={{ borderColor: currentTheme.uiBorder }}>
             <h3 className="font-semibold text-sm" style={{ color: currentTheme.textHeader }}>Interaction Strategy</h3>
             <label className="flex items-center gap-2 cursor-pointer text-sm" style={{ color: currentTheme.textData }}>
-              <input 
-                type="radio" 
-                name="interactionStrategy" 
-                value="ui-overlay" 
-                checked={interactionStrategy === 'ui-overlay'} 
+              <input
+                type="radio"
+                name="interactionStrategy"
+                value="ui-overlay"
+                checked={interactionStrategy === 'ui-overlay'}
                 onChange={() => setInteractionStrategy('ui-overlay')}
                 className="cursor-pointer"
                 style={{ accentColor: currentTheme.accent }}
@@ -144,11 +144,11 @@ export default function App() {
               UI Overlay
             </label>
             <label className="flex items-center gap-2 cursor-pointer text-sm" style={{ color: currentTheme.textData }}>
-              <input 
-                type="radio" 
-                name="interactionStrategy" 
-                value="contextual-menu" 
-                checked={interactionStrategy === 'contextual-menu'} 
+              <input
+                type="radio"
+                name="interactionStrategy"
+                value="contextual-menu"
+                checked={interactionStrategy === 'contextual-menu'}
                 onChange={() => setInteractionStrategy('contextual-menu')}
                 className="cursor-pointer"
                 style={{ accentColor: currentTheme.accent }}
@@ -160,11 +160,23 @@ export default function App() {
           <div className="flex flex-col gap-2 mt-4 pt-4 border-t" style={{ borderColor: currentTheme.uiBorder }}>
             <h3 className="font-semibold text-sm" style={{ color: currentTheme.textHeader }}>Progress Strategy</h3>
             <label className="flex items-center gap-2 cursor-pointer text-sm" style={{ color: currentTheme.textData }}>
-              <input 
-                type="radio" 
-                name="progressStrategy" 
-                value="spreadsheet-overlay" 
-                checked={progressStrategy === 'spreadsheet-overlay'} 
+              <input
+                type="radio"
+                name="progressStrategy"
+                value="none"
+                checked={progressStrategy === 'none'}
+                onChange={() => setProgressStrategy('none')}
+                className="cursor-pointer"
+                style={{ accentColor: currentTheme.accent }}
+              />
+              None (Immediate)
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer text-sm" style={{ color: currentTheme.textData }}>
+              <input
+                type="radio"
+                name="progressStrategy"
+                value="spreadsheet-overlay"
+                checked={progressStrategy === 'spreadsheet-overlay'}
                 onChange={() => setProgressStrategy('spreadsheet-overlay')}
                 className="cursor-pointer"
                 style={{ accentColor: currentTheme.accent }}
@@ -172,11 +184,11 @@ export default function App() {
               Spreadsheet Overlay
             </label>
             <label className="flex items-center gap-2 cursor-pointer text-sm" style={{ color: currentTheme.textData }}>
-              <input 
-                type="radio" 
-                name="progressStrategy" 
-                value="artifact-streaming" 
-                checked={progressStrategy === 'artifact-streaming'} 
+              <input
+                type="radio"
+                name="progressStrategy"
+                value="artifact-streaming"
+                checked={progressStrategy === 'artifact-streaming'}
                 onChange={() => setProgressStrategy('artifact-streaming')}
                 className="cursor-pointer"
                 style={{ accentColor: currentTheme.accent }}
@@ -188,11 +200,11 @@ export default function App() {
           <div className="flex flex-col gap-2 mt-4 pt-4 border-t" style={{ borderColor: currentTheme.uiBorder }}>
             <h3 className="font-semibold text-sm" style={{ color: currentTheme.textHeader }}>Visualization Strategy</h3>
             <label className="flex items-center gap-2 cursor-pointer text-sm" style={{ color: currentTheme.textData }}>
-              <input 
-                type="radio" 
-                name="strategy" 
-                value="spatial-sidebar" 
-                checked={strategy === 'spatial-sidebar'} 
+              <input
+                type="radio"
+                name="strategy"
+                value="spatial-sidebar"
+                checked={strategy === 'spatial-sidebar'}
                 onChange={() => setStrategy('spatial-sidebar')}
                 className="cursor-pointer"
                 style={{ accentColor: currentTheme.accent }}
@@ -200,11 +212,11 @@ export default function App() {
               Spatial Sidebar
             </label>
             <label className="flex items-center gap-2 cursor-pointer text-sm" style={{ color: currentTheme.textData }}>
-              <input 
-                type="radio" 
-                name="strategy" 
-                value="background-tabs" 
-                checked={strategy === 'background-tabs'} 
+              <input
+                type="radio"
+                name="strategy"
+                value="background-tabs"
+                checked={strategy === 'background-tabs'}
                 onChange={() => setStrategy('background-tabs')}
                 className="cursor-pointer"
                 style={{ accentColor: currentTheme.accent }}
@@ -212,11 +224,11 @@ export default function App() {
               Background Tabs
             </label>
             <label className="flex items-center gap-2 cursor-pointer text-sm" style={{ color: currentTheme.textData }}>
-              <input 
-                type="radio" 
-                name="strategy" 
-                value="spatial-grouping" 
-                checked={strategy === 'spatial-grouping'} 
+              <input
+                type="radio"
+                name="strategy"
+                value="spatial-grouping"
+                checked={strategy === 'spatial-grouping'}
                 onChange={() => setStrategy('spatial-grouping')}
                 className="cursor-pointer"
                 style={{ accentColor: currentTheme.accent }}

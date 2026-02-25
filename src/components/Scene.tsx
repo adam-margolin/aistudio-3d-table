@@ -10,7 +10,7 @@ import { Theme } from '../themes';
 const generateMockArtifact = (id: string, type?: string): Artifact => {
   const types = ['Descriptive Stats', 'Linear Regression', 'Clustering', 'Time Series'];
   const selectedType = type || types[Math.floor(Math.random() * types.length)];
-  
+
   const generateData = () => Array.from({ length: 10 }, () => Math.random() * 100);
 
   return {
@@ -76,8 +76,15 @@ export function Scene({ triggerRun, strategy, interactionStrategy, progressStrat
 
   const runAlgorithm = useCallback((type?: string) => {
     setIsProcessing(true);
-    
-    if (progressStrategy === 'artifact-streaming') {
+
+    if (progressStrategy === 'none') {
+      const newId = `artifact-${Date.now()}`;
+      const newArtifact = generateMockArtifact(newId, type);
+
+      setArtifacts(prev => [newArtifact, ...prev]);
+      setActiveArtifactId(newId);
+      setIsProcessing(false);
+    } else if (progressStrategy === 'artifact-streaming') {
       const newId = `artifact-${Date.now()}`;
       const pendingArtifact: Artifact = {
         id: newId,
@@ -88,10 +95,10 @@ export function Scene({ triggerRun, strategy, interactionStrategy, progressStrat
         status: 'pending',
         progress: 0,
       };
-      
+
       setArtifacts(prev => [pendingArtifact, ...prev]);
       setActiveArtifactId(newId);
-      
+
       let progress = 0;
       const interval = setInterval(() => {
         progress += 0.1;
@@ -102,17 +109,17 @@ export function Scene({ triggerRun, strategy, interactionStrategy, progressStrat
         } else {
           setArtifacts(prev => prev.map(a => a.id === newId ? { ...a, progress } : a));
         }
-      }, 150);
+      }, 75);
     } else {
       // Simulate processing time
       setTimeout(() => {
         const newId = `artifact-${Date.now()}`;
         const newArtifact = generateMockArtifact(newId, type);
-        
+
         setArtifacts(prev => [newArtifact, ...prev]);
         setActiveArtifactId(newId);
         setIsProcessing(false);
-      }, 1500);
+      }, 750);
     }
   }, [progressStrategy]);
 
@@ -129,7 +136,7 @@ export function Scene({ triggerRun, strategy, interactionStrategy, progressStrat
   return (
     <>
       <color attach="background" args={[theme.background]} />
-      
+
       {/* Lighting */}
       <ambientLight intensity={0.4} />
       <directionalLight
@@ -141,7 +148,7 @@ export function Scene({ triggerRun, strategy, interactionStrategy, progressStrat
         <orthographicCamera attach="shadow-camera" args={[-10, 10, 10, -10, 0.1, 50]} />
       </directionalLight>
       <pointLight position={[-10, 10, -10]} intensity={0.5} color={theme.accent} />
-      
+
       {/* Environment for reflections */}
       <Environment preset="city" />
 
@@ -150,7 +157,7 @@ export function Scene({ triggerRun, strategy, interactionStrategy, progressStrat
         <planeGeometry args={[100, 100]} />
         <meshStandardMaterial color={theme.floorplane} roughness={0.8} metalness={0.2} />
       </mesh>
-      
+
       {/* Grid helper for a professional tech look */}
       <gridHelper args={[100, 100, theme.grid, theme.grid]} position={[0, -1.99, 0]} />
 
@@ -166,9 +173,9 @@ export function Scene({ triggerRun, strategy, interactionStrategy, progressStrat
       />
 
       {/* 3D Spreadsheet Container */}
-      <Spreadsheet 
-        position={[-4, 0, 0]} 
-        interactionStrategy={interactionStrategy} 
+      <Spreadsheet
+        position={[-4, 0, 0]}
+        interactionStrategy={interactionStrategy}
         onRunAlgorithm={runAlgorithm}
         isProcessing={isProcessing && progressStrategy === 'spreadsheet-overlay'}
         theme={theme}
