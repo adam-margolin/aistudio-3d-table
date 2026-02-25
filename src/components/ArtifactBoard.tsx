@@ -257,15 +257,32 @@ export function ArtifactBoard({ artifact, isActive, inactiveIndex, onClick, stra
       baseScale = 0.4;
       targetOpacity = hovered ? 1 : 0.6;
     } else if (strategy === 'spatial-grouping') {
-      // Create a semi-circle behind the main workspace
-      const angle = (inactiveIndex - 2) * 0.3; // Center around index 2
-      const radius = 10;
+      // Group panels by category
+      const title = artifact.title.toLowerCase();
+      let baseAngle = 0;
+      if (title.includes('descriptive')) baseAngle = -0.8;
+      else if (title.includes('linear')) baseAngle = -0.3;
+      else if (title.includes('cluster')) baseAngle = 0.3;
+      else if (title.includes('time')) baseAngle = 0.8;
+      else baseAngle = (inactiveIndex % 4 - 1.5) * 0.5; // Fallback
+
+      // Create a stagger offset within the cluster
+      const staggerIndex = inactiveIndex % 5;
+      const staggerOffset = staggerIndex - 2; // -2, -1, 0, 1, 2
+      const angle = baseAngle + staggerOffset * 0.15;
+      
+      const radius = 18;
+      const xCenter = -2; // Push arc center left to wrap around spreadsheet and active board
+
       targetPosition.set(
-        Math.sin(angle) * radius,
-        3 + Math.abs(inactiveIndex - 2) * 0.5, // layered vertically
-        -Math.cos(angle) * radius + 2
+        xCenter + Math.sin(angle) * radius,
+        4 + Math.abs(staggerOffset) * 0.6, // V-shape staging per cluster
+        -Math.cos(angle) * radius + 4 // Arc depth
       );
-      targetRotation.set(0, angle, 0);
+      
+      // Face towards the center of the arc (-angle makes it face inward)
+      targetRotation.set(0, -angle, 0);
+      
       baseScale = 0.4;
       targetOpacity = hovered ? 1 : 0.6;
     }
