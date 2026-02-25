@@ -185,7 +185,7 @@ export function Spreadsheet({ position = [-6, 0, 0], interactionStrategy = 'ui-o
     e.target.releasePointerCapture(e.pointerId);
   };
 
-  const topMargin = 0.4;
+  const topMargin = 0.2;
   const containerWidth = currentWidth + 0.1;
   const containerHeight = currentHeight + 0.1 + topMargin;
   const containerDepth = 0.1;
@@ -317,10 +317,10 @@ export function Spreadsheet({ position = [-6, 0, 0], interactionStrategy = 'ui-o
       onContextMenu={handleContextMenu}
     >
       {/* Toggle Mode */}
-      <Html position={[0, containerHeight / 2 - topMargin / 2, containerDepth / 2 + 0.02]} transform center>
-        <div className="flex gap-2 bg-slate-800 p-1 rounded-lg pointer-events-auto border border-slate-700/50 shadow-lg">
+      <Html position={[0, containerHeight / 2 - 0.12, containerDepth / 2 + 0.02]} transform center scale={0.1}>
+        <div className="flex gap-1 bg-slate-800 p-0.5 rounded-md pointer-events-auto border border-slate-700/50 shadow-sm">
           <button 
-            className={`px-3 py-1 text-xs font-medium rounded transition-colors ${mode === 'resize' ? 'bg-blue-500 text-white' : 'text-slate-300 hover:bg-slate-700'}`}
+            className={`px-2 py-0.5 text-[10px] font-medium rounded-sm transition-colors ${mode === 'resize' ? 'bg-blue-500 text-white' : 'text-slate-300 hover:bg-slate-700'}`}
             onClick={(e) => { 
               e.stopPropagation(); 
               setMode('resize'); 
@@ -331,7 +331,7 @@ export function Spreadsheet({ position = [-6, 0, 0], interactionStrategy = 'ui-o
             Resize
           </button>
           <button 
-            className={`px-3 py-1 text-xs font-medium rounded transition-colors ${mode === 'clip' ? 'bg-blue-500 text-white' : 'text-slate-300 hover:bg-slate-700'}`}
+            className={`px-2 py-0.5 text-[10px] font-medium rounded-sm transition-colors ${mode === 'clip' ? 'bg-blue-500 text-white' : 'text-slate-300 hover:bg-slate-700'}`}
             onClick={(e) => { 
               e.stopPropagation(); 
               setMode('clip'); 
@@ -345,8 +345,8 @@ export function Spreadsheet({ position = [-6, 0, 0], interactionStrategy = 'ui-o
       </Html>
 
       {/* Drag Indicator */}
-      <group position={[0, containerHeight / 2 - topMargin / 2, containerDepth / 2 + 0.001]}>
-        <RoundedBox args={[0.6, 0.04, 0.01]} radius={0.02} smoothness={2}>
+      <group position={[0, containerHeight / 2 - 0.05, containerDepth / 2 + 0.001]}>
+        <RoundedBox args={[0.2, 0.015, 0.01]} radius={0.0075} smoothness={2}>
           <meshStandardMaterial color={isDragging ? "#60a5fa" : "#475569"} />
         </RoundedBox>
       </group>
@@ -383,14 +383,14 @@ export function Spreadsheet({ position = [-6, 0, 0], interactionStrategy = 'ui-o
 
       {/* Resize Handle */}
       <mesh
-        position={[containerWidth / 2 - 0.05, -containerHeight / 2 + 0.05, containerDepth / 2 + 0.01]}
+        position={[containerWidth / 2 - 0.02, -containerHeight / 2 + 0.02, containerDepth / 2 + 0.01]}
         onPointerDown={handleResizePointerDown}
         onPointerMove={handleResizePointerMove}
         onPointerUp={handleResizePointerUp}
         onPointerOver={() => setIsHoveringResize(true)}
         onPointerOut={() => setIsHoveringResize(false)}
       >
-        <boxGeometry args={[0.1, 0.1, 0.02]} />
+        <boxGeometry args={[0.04, 0.04, 0.02]} />
         <meshStandardMaterial color={isResizing ? "#60a5fa" : "#475569"} />
       </mesh>
 
