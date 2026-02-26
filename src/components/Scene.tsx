@@ -68,13 +68,20 @@ export function Scene({ triggerRun, strategy, interactionStrategy, progressStrat
 
   // 4. Vertical Grid
   const topMarginRatio = 0.20; // 20% flat top margin
+  const topY = (viewport.height / 2) - (viewport.height * topMarginRatio);
+
   const bottomMarginPx = 32;
   const bottomMargin3D = (bottomMarginPx / size.height) * viewport.height;
-  const tableHeight = viewport.height * (1 - topMarginRatio) - bottomMargin3D;
+
+  // Constrain bottom edge to not cut into the floor plane at y=-2.0
+  const floorY = -1.9;
+  const bottomY = Math.max(-viewport.height / 2 + bottomMargin3D, floorY);
+
+  const tableHeight = Math.max(topY - bottomY, 2); // Ensure positive minimum height
 
   // 5. Explicit Positioning
   const tableX = -viewport.width / 2 + margin3D + tableWidth / 2;
-  const tableY = -viewport.height / 2 + bottomMargin3D + tableHeight / 2;
+  const tableY = bottomY + tableHeight / 2;
 
   // Artifacts Root Position
   const graphicsX = tableX + tableWidth / 2 + centerGap3D + graphicsWidth / 2;

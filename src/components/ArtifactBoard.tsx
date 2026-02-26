@@ -316,7 +316,7 @@ export function ArtifactBoard({ artifact, isActive, inactiveIndex, onClick, stra
   const materialRef = useRef<THREE.MeshPhysicalMaterial>(null);
   const [activePlotIndex, setActivePlotIndex] = useState(0);
   const [hovered, setHovered] = useState(false);
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(() => artifact.title.includes('Multi-Panel'));
 
   // If inactive, force collapse
   const expanded = isActive && isExpanded;

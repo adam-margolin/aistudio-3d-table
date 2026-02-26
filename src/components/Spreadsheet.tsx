@@ -21,6 +21,14 @@ export function Spreadsheet({ position = [-6, 0, 0], interactionStrategy = 'ui-o
   const containerRef = useRef<THREE.Group>(null);
   const [contextMenu, setContextMenu] = useState<{ x: number, y: number } | null>(null);
 
+  // Dragging state
+  const [dragOffset, setDragOffset] = useState<[number, number, number]>([0, 0, 0]);
+  const [isDragging, setIsDragging] = useState(false);
+  const [isHoveringHandle, setIsHoveringHandle] = useState(false);
+  const dragPlane = useRef(new THREE.Plane(new THREE.Vector3(0, 0, 1), 0));
+  const dragStartPoint = useRef(new THREE.Vector3());
+  const initialDragOffset = useRef<[number, number, number]>([0, 0, 0]);
+
   const { viewport } = useThree();
 
   // Dimensions constrained by application layout engine
@@ -33,16 +41,170 @@ export function Spreadsheet({ position = [-6, 0, 0], interactionStrategy = 'ui-o
   const targetX = tableX;
   const targetY = tableY;
 
-  const currentWidth = containerWidth;
-  const currentHeight = containerHeight;
+  // Mode state
+  const [mode, setMode] = useState<'resize' | 'clip'>('resize');
+  const [clipWidth, setClipWidth] = useState<number | null>(null);
+  const [clipHeight, setClipHeight] = useState<number | null>(null);
+
+  const currentWidth = mode === 'clip' && clipWidth !== null ? clipWidth : containerWidth;
+  const currentHeight = mode === 'clip' && clipHeight !== null ? clipHeight : containerHeight;
 
   // Grid dimensions
-  const cols = 41; // generate enough to bleed off edge and get visually clipped
-  const rows = 121;
+  const [cols, setCols] = useState(41); // generate enough to bleed off edge and get visually clipped
+  const [rows, setRows] = useState(121);
   const cellWidth = 0.25;
   const cellHeight = 0.08;
   const cellDepth = 0.02;
   const gap = 0.01;
+
+  // Calculate container dimensions dynamically if in resize mode
+  const totalWidth = cols * cellWidth + (cols - 1) * gap;
+  const totalHeight = rows * cellHeight + (rows - 1) * gap;
+
+  // Resizing state
+  const [isResizing, setIsResizing] = useState(false);
+  const [isHoveringResize, setIsHoveringResize] = useState(false);
+  const resizeStartPoint = useRef(new THREE.Vector3());
+  const initialResizeCols = useRef(cols);
+  const initialResizeRows = useRef(rows);
+  const initialResizeDragOffset = useRef<[number, number, number]>([0, 0, 0]);
+  const initialClipWidth = useRef<number>(0);
+  const initialClipHeight = useRef<number>(0);
+
+  // Effects and Interaction Handlers
+  useEffect(() => {
+    if (isDragging) {
+      document.body.style.cursor = 'grabbing';
+    } else if (isHoveringHandle) {
+      document.body.style.cursor = 'grab';
+    } else if (isResizing || isHoveringResize) {
+      document.body.style.cursor = 'nwse-resize';
+    } else {
+      document.body.style.cursor = 'auto';
+    }
+    return () => {
+      document.body.style.cursor = 'auto';
+    };
+  }, [isDragging, isHoveringHandle, isResizing, isHoveringResize]);
+
+  const handlePointerDown = (e: any) => {
+    e.stopPropagation();
+    setIsDragging(true);
+    e.target.setPointerCapture(e.pointerId);
+
+    const worldPos = new THREE.Vector3();
+    if (containerRef.current) {
+      containerRef.current.getWorldPosition(worldPos);
+    }
+    dragPlane.current.setFromNormalAndCoplanarPoint(
+      new THREE.Vector3(0, 0, 1),
+      worldPos
+    );
+
+    e.ray.intersectPlane(dragPlane.current, dragStartPoint.current);
+    initialDragOffset.current = [...dragOffset];
+  };
+
+  const handlePointerMove = (e: any) => {
+    if (!isDragging) return;
+    e.stopPropagation();
+
+    const intersectPoint = new THREE.Vector3();
+    e.ray.intersectPlane(dragPlane.current, intersectPoint);
+
+    const dx = intersectPoint.x - dragStartPoint.current.x;
+    const dy = intersectPoint.y - dragStartPoint.current.y;
+
+    setDragOffset([
+      initialDragOffset.current[0] + dx,
+      initialDragOffset.current[1] + dy,
+      initialDragOffset.current[2]
+    ]);
+  };
+
+  const handlePointerUp = (e: any) => {
+    e.stopPropagation();
+    setIsDragging(false);
+    e.target.releasePointerCapture(e.pointerId);
+  };
+
+  const handleResizePointerDown = (e: any) => {
+    e.stopPropagation();
+    setIsResizing(true);
+    e.target.setPointerCapture(e.pointerId);
+
+    const worldPos = new THREE.Vector3();
+    if (containerRef.current) {
+      containerRef.current.getWorldPosition(worldPos);
+    }
+    dragPlane.current.setFromNormalAndCoplanarPoint(
+      new THREE.Vector3(0, 0, 1),
+      worldPos
+    );
+
+    e.ray.intersectPlane(dragPlane.current, resizeStartPoint.current);
+    initialResizeCols.current = cols;
+    initialResizeRows.current = rows;
+    initialResizeDragOffset.current = [...dragOffset];
+    initialClipWidth.current = currentWidth;
+    initialClipHeight.current = currentHeight;
+  };
+
+  const handleResizePointerMove = (e: any) => {
+    if (!isResizing) return;
+    e.stopPropagation();
+
+    const intersectPoint = new THREE.Vector3();
+    e.ray.intersectPlane(dragPlane.current, intersectPoint);
+
+    const dx = intersectPoint.x - resizeStartPoint.current.x;
+    const dy = intersectPoint.y - resizeStartPoint.current.y;
+
+    if (mode === 'resize') {
+      const dCols = Math.round(dx / (cellWidth + gap));
+      const dRows = Math.round(-dy / (cellHeight + gap));
+
+      const newCols = Math.max(2, initialResizeCols.current + dCols);
+      const newRows = Math.max(2, initialResizeRows.current + dRows);
+
+      if (newCols !== cols || newRows !== rows) {
+        setCols(newCols);
+        setRows(newRows);
+
+        const deltaW = (newCols - initialResizeCols.current) * (cellWidth + gap);
+        const deltaH = (newRows - initialResizeRows.current) * (cellHeight + gap);
+
+        setDragOffset([
+          initialResizeDragOffset.current[0] + deltaW / 2,
+          initialResizeDragOffset.current[1] - deltaH / 2,
+          initialResizeDragOffset.current[2]
+        ]);
+      }
+    } else {
+      const newClipWidth = Math.max(cellWidth + gap, initialClipWidth.current + dx);
+      const newClipHeight = Math.max(cellHeight + gap, initialClipHeight.current - dy);
+
+      if (newClipWidth !== clipWidth || newClipHeight !== clipHeight) {
+        setClipWidth(newClipWidth);
+        setClipHeight(newClipHeight);
+
+        const deltaW = newClipWidth - initialClipWidth.current;
+        const deltaH = newClipHeight - initialClipHeight.current;
+
+        setDragOffset([
+          initialResizeDragOffset.current[0] + deltaW / 2,
+          initialResizeDragOffset.current[1] - deltaH / 2,
+          initialResizeDragOffset.current[2]
+        ]);
+      }
+    }
+  };
+
+  const handleResizePointerUp = (e: any) => {
+    e.stopPropagation();
+    setIsResizing(false);
+    e.target.releasePointerCapture(e.pointerId);
+  };
 
   // Generate data once so it doesn't change on resize
   const cellData = useMemo(() => {
@@ -161,7 +323,7 @@ export function Spreadsheet({ position = [-6, 0, 0], interactionStrategy = 'ui-o
 
   return (
     <group
-      position={[targetX, targetY, 0]}
+      position={[targetX + dragOffset[0], targetY + dragOffset[1], 0]}
       ref={containerRef}
       onContextMenu={handleContextMenu}
     >
@@ -169,7 +331,7 @@ export function Spreadsheet({ position = [-6, 0, 0], interactionStrategy = 'ui-o
       {/* Top Header Row (Drag indicator + Controls) */}
       <group position={[0, containerHeight / 2 - topMargin / 2, containerDepth / 2 + 0.05]}>
         {/* Toggle Mode Container */}
-        <group position={[-containerWidth / 2 + 1, 0, 0]}>
+        <group position={[-currentWidth / 2 + 1, 0, 0]}>
           <RoundedBox
             args={[2, 0.3, 0.05]}
             radius={0.1}
@@ -177,24 +339,60 @@ export function Spreadsheet({ position = [-6, 0, 0], interactionStrategy = 'ui-o
           >
             <meshStandardMaterial color={theme.uiBackground} roughness={0.5} transparent opacity={0.8} />
           </RoundedBox>
-          <Text
-            position={[-0.4, 0, 0.03]}
-            fontSize={0.12}
-            color={theme.uiText}
-            anchorX="center"
-            anchorY="middle"
-          >
-            RESIZE
-          </Text>
-          <Text
-            position={[0.4, 0, 0.03]}
-            fontSize={0.12}
-            color={theme.textData}
-            anchorX="center"
-            anchorY="middle"
-          >
-            CLIP
-          </Text>
+
+          {/* Resize Button Area */}
+          <group position={[-0.4, 0, 0.01]}>
+            <RoundedBox
+              args={[0.8, 0.2, 0.02]}
+              radius={0.05}
+              onClick={(e) => {
+                e.stopPropagation();
+                setMode('resize');
+                setClipWidth(null);
+                setClipHeight(null);
+              }}
+              onPointerOver={() => document.body.style.cursor = 'pointer'}
+              onPointerOut={() => document.body.style.cursor = 'auto'}
+            >
+              <meshStandardMaterial color={mode === 'resize' ? theme.accent : "transparent"} opacity={mode === 'resize' ? 1 : 0} transparent />
+            </RoundedBox>
+            <Text
+              position={[0, 0, 0.02]}
+              fontSize={0.12}
+              color={mode === 'resize' ? "#ffffff" : theme.uiText}
+              anchorX="center"
+              anchorY="middle"
+            >
+              RESIZE
+            </Text>
+          </group>
+
+          {/* Clip Button Area */}
+          <group position={[0.4, 0, 0.01]}>
+            <RoundedBox
+              args={[0.8, 0.2, 0.02]}
+              radius={0.05}
+              onClick={(e) => {
+                e.stopPropagation();
+                setMode('clip');
+                setClipWidth(currentWidth);
+                setClipHeight(currentHeight);
+              }}
+              onPointerOver={() => document.body.style.cursor = 'pointer'}
+              onPointerOut={() => document.body.style.cursor = 'auto'}
+            >
+              <meshStandardMaterial color={mode === 'clip' ? theme.accent : "transparent"} opacity={mode === 'clip' ? 1 : 0} transparent />
+            </RoundedBox>
+            <Text
+              position={[0, 0, 0.02]}
+              fontSize={0.12}
+              color={mode === 'clip' ? "#ffffff" : theme.uiText}
+              anchorX="center"
+              anchorY="middle"
+            >
+              CLIP
+            </Text>
+          </group>
         </group>
 
         {/* Drag Indicator */}
@@ -203,14 +401,27 @@ export function Spreadsheet({ position = [-6, 0, 0], interactionStrategy = 'ui-o
             args={[1.5, 0.2, 0.02]}
             radius={0.05}
           >
-            <meshStandardMaterial color={theme.uiBorder} transparent opacity={0.5} />
+            <meshStandardMaterial color={isDragging ? theme.accent : theme.uiBorder} transparent opacity={isDragging ? 0.8 : 0.5} />
           </RoundedBox>
         </group>
       </group>
 
+      {/* Drag Handle Hit Area */}
+      <mesh
+        position={[0, containerHeight / 2 - topMargin / 2, containerDepth / 2 + 0.01]}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerOver={() => setIsHoveringHandle(true)}
+        onPointerOut={() => setIsHoveringHandle(false)}
+      >
+        <planeGeometry args={[currentWidth, topMargin]} />
+        <meshBasicMaterial transparent opacity={0} />
+      </mesh>
+
       {/* Main Container */}
       <RoundedBox
-        args={[containerWidth, containerHeight, containerDepth]}
+        args={[currentWidth, containerHeight, containerDepth]}
         radius={0.02}
         smoothness={4}
         castShadow
@@ -229,6 +440,19 @@ export function Spreadsheet({ position = [-6, 0, 0], interactionStrategy = 'ui-o
           opacity={1}
         />
       </RoundedBox>
+
+      {/* Resize Handle */}
+      <mesh
+        position={[currentWidth / 2 - 0.02, -containerHeight / 2 + 0.02, containerDepth / 2 + 0.01]}
+        onPointerDown={handleResizePointerDown}
+        onPointerMove={handleResizePointerMove}
+        onPointerUp={handleResizePointerUp}
+        onPointerOver={() => setIsHoveringResize(true)}
+        onPointerOut={() => setIsHoveringResize(false)}
+      >
+        <boxGeometry args={[0.04, 0.04, 0.02]} />
+        <meshStandardMaterial color={isResizing ? theme.accent : theme.uiBorder} />
+      </mesh>
 
       {/* Cells */}
       {cells.map((cell) => (
@@ -282,8 +506,8 @@ export function Spreadsheet({ position = [-6, 0, 0], interactionStrategy = 'ui-o
       {contextMenu && !isProcessing && (
         <Html
           position={[
-            contextMenu.x - targetX,
-            contextMenu.y - targetY,
+            contextMenu.x - targetX - dragOffset[0],
+            contextMenu.y - targetY - dragOffset[1],
             containerDepth / 2 + 0.1
           ]}
           zIndexRange={[100, 0]}
