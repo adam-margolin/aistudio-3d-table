@@ -50,6 +50,7 @@ export default function App() {
   const [interactionStrategy, setInteractionStrategy] = useState<InteractionStrategy>('ui-overlay');
   const [progressStrategy, setProgressStrategy] = useState<ProgressStrategy>('none');
   const [themeId, setThemeId] = useState<string>('blue-purple');
+  const [isMenuCollapsed, setIsMenuCollapsed] = useState<boolean>(false);
 
   const currentTheme = themes.find(t => t.id === themeId) || themes[0];
 
@@ -77,12 +78,21 @@ export default function App() {
       </ErrorBoundary>
 
       {/* 2D UI Overlay */}
-      <div className="absolute bottom-8 right-8 z-10">
-        <div 
-          className="flex flex-col gap-4 backdrop-blur-md p-6 rounded-2xl shadow-2xl w-80 max-h-[80vh] overflow-y-auto"
+      <div className="absolute bottom-8 right-8 z-10 flex flex-col items-end gap-4">
+        <button
+          onClick={() => setIsMenuCollapsed(!isMenuCollapsed)}
+          className="px-4 py-2 rounded-full shadow-lg backdrop-blur-md transition-colors font-medium text-sm flex items-center gap-2"
           style={{ backgroundColor: currentTheme.uiBackground, color: currentTheme.uiText, border: '1px solid ' + currentTheme.uiBorder }}
         >
-          <h2 className="font-semibold text-lg" style={{ color: currentTheme.textHeader }}>Analysis Tools</h2>
+          {isMenuCollapsed ? '🛠️ Show Tools' : '✕ Hide Tools'}
+        </button>
+
+        {!isMenuCollapsed && (
+          <div 
+            className="flex flex-col gap-4 backdrop-blur-md p-6 rounded-2xl shadow-2xl w-80 max-h-[80vh] overflow-y-auto"
+            style={{ backgroundColor: currentTheme.uiBackground, color: currentTheme.uiText, border: '1px solid ' + currentTheme.uiBorder }}
+          >
+            <h2 className="font-semibold text-lg" style={{ color: currentTheme.textHeader }}>Analysis Tools</h2>
           <p className="text-sm" style={{ color: currentTheme.textData }}>Select data from the spreadsheet and run an algorithm.</p>
           
           {interactionStrategy === 'ui-overlay' ? (
@@ -237,6 +247,7 @@ export default function App() {
             </label>
           </div>
         </div>
+        )}
       </div>
     </div>
   );
