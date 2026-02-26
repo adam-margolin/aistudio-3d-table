@@ -74,7 +74,7 @@ function ScatterPlot({ data, position, opacity = 1, theme }: { data: number[], p
   );
 }
 
-function PlotViewer({ plots, activeIndex, onSelect, isActive, isExpanded, onToggleExpand, boardHeight, theme }: { plots: PlotData[], activeIndex: number, onSelect: (idx: number) => void, isActive: boolean, isExpanded: boolean, onToggleExpand: () => void, boardHeight: number, theme: Theme }) {
+function PlotViewer({ plots, activeIndex, onSelect, isActive, isExpanded, onToggleExpand, boardWidth, boardHeight, theme }: { plots: PlotData[], activeIndex: number, onSelect: (idx: number) => void, isActive: boolean, isExpanded: boolean, onToggleExpand: () => void, boardWidth: number, boardHeight: number, theme: Theme }) {
   const activePlot = plots[activeIndex];
   const [page, setPage] = useState(0);
 
@@ -89,6 +89,11 @@ function PlotViewer({ plots, activeIndex, onSelect, isActive, isExpanded, onTogg
   const rows = 2;
 
   const viewerPosition = isExpanded ? [1.5, 0.5, 0.2] : [1, -0.5, 0.2];
+
+  // Calculate panel dimensions
+  const panelWidth = boardWidth - 0.2; // slight padding
+  const panelHeight = boardHeight * 0.1;
+  const panelY = -boardHeight / 2 + panelHeight / 2 + 0.1; // 0.1 padding from bottom
 
   return (
     <group position={viewerPosition as [number, number, number]}>
@@ -195,10 +200,10 @@ function PlotViewer({ plots, activeIndex, onSelect, isActive, isExpanded, onTogg
 
       {/* Tabs / Buttons UI - Only show when the board is active */}
       {isActive && (
-        <group position={[isExpanded ? -1.5 : 0, -boardHeight / 2 + 0.6 - viewerPosition[1], 0.1]}>
+        <group position={[-viewerPosition[0], panelY - viewerPosition[1], 0.1]}>
           {/* Background */}
           <RoundedBox 
-            args={[isExpanded ? 2.5 : Math.max(3, plots.length * 1.5 + 0.5), isExpanded ? 0.6 : 1.2, 0.05]} 
+            args={[panelWidth, panelHeight, 0.05]} 
             radius={0.1} 
             position={[0, 0, 0]}
           >
@@ -207,14 +212,13 @@ function PlotViewer({ plots, activeIndex, onSelect, isActive, isExpanded, onTogg
 
           {!isExpanded && plots.map((plot, i) => {
             const isPlotActive = i === activeIndex;
-            const totalWidth = plots.length * 1.5;
-            const startX = -totalWidth / 2 + 0.75;
-            const xOffset = startX + i * 1.5;
+            const startX = -panelWidth / 2 + 0.5 + 0.1; // Align left with padding
+            const xOffset = startX + i * 1.05;
             
             return (
-              <group key={plot.id} position={[xOffset, 0.2, 0.03]}>
+              <group key={plot.id} position={[xOffset, 0, 0.03]}>
                 <RoundedBox 
-                  args={[1.4, 0.4, 0.02]} 
+                  args={[1.0, panelHeight * 0.6, 0.02]} 
                   radius={0.05} 
                   onClick={(e) => { e.stopPropagation(); onSelect(i); }}
                   onPointerOver={() => document.body.style.cursor = 'pointer'}
@@ -224,22 +228,22 @@ function PlotViewer({ plots, activeIndex, onSelect, isActive, isExpanded, onTogg
                 </RoundedBox>
                 <Text
                   position={[0, 0, 0.02]}
-                  fontSize={0.12}
+                  fontSize={0.09}
                   color={isPlotActive ? "#ffffff" : theme.textData}
                   anchorX="center"
                   anchorY="middle"
                 >
                   {plot.type === 'bar' ? '📊 ' : '📈 '}
-                  {plot.title.length > 12 ? plot.title.substring(0, 12) + '...' : plot.title}
+                  {plot.title.length > 10 ? plot.title.substring(0, 10) + '...' : plot.title}
                 </Text>
               </group>
             );
           })}
 
           {/* Expand/Collapse Button */}
-          <group position={[0, isExpanded ? 0 : -0.3, 0.03]}>
+          <group position={[panelWidth / 2 - 0.7, 0, 0.03]}>
             <RoundedBox 
-              args={[2, 0.35, 0.02]} 
+              args={[1.2, panelHeight * 0.6, 0.02]} 
               radius={0.05}
               onClick={(e) => { e.stopPropagation(); onToggleExpand(); }}
               onPointerOver={() => document.body.style.cursor = 'pointer'}
@@ -249,12 +253,12 @@ function PlotViewer({ plots, activeIndex, onSelect, isActive, isExpanded, onTogg
             </RoundedBox>
             <Text
               position={[0, 0, 0.02]}
-              fontSize={0.12}
+              fontSize={0.09}
               color={theme.textData}
               anchorX="center"
               anchorY="middle"
             >
-              {isExpanded ? '↙ Collapse Grid' : '↗ Expand Grid'}
+              {isExpanded ? '↙ Collapse' : '↗ Expand'}
             </Text>
           </group>
         </group>
@@ -314,31 +318,37 @@ export function ArtifactBoard({ artifact, isActive, inactiveIndex, onClick, stra
       baseScale = 0.4;
       targetOpacity = hovered ? 1 : 0.6;
     } else if (strategy === 'spatial-grouping') {
-      // Group panels by category
+      // Group panels by category into distinct organized stacks forming a concave arc
       const title = artifact.title.toLowerCase();
-      let baseAngle = 0;
-      if (title.includes('descriptive')) baseAngle = -0.8;
-      else if (title.includes('linear')) baseAngle = -0.3;
-      else if (title.includes('cluster')) baseAngle = 0.3;
-      else if (title.includes('time')) baseAngle = 0.8;
-      else baseAngle = (inactiveIndex % 4 - 1.5) * 0.5; // Fallback
+      let categoryIndex = 0;
+      if (title.includes('descriptive')) categoryIndex = 0;
+      else if (title.includes('linear')) categoryIndex = 1;
+      else if (title.includes('cluster')) categoryIndex = 2;
+      else if (title.includes('time')) categoryIndex = 3;
+      else categoryIndex = inactiveIndex % 4; // Fallback
 
-      // Create a stagger offset within the cluster
-      const staggerIndex = inactiveIndex % 5;
-      const staggerOffset = staggerIndex - 2; // -2, -1, 0, 1, 2
-      const angle = baseAngle + staggerOffset * 0.15;
-      
-      const radius = 18;
-      const xCenter = -2; // Push arc center left to wrap around spreadsheet and active board
+      // 4 distinct columns spread across the top background, forming a concave arc
+      const xPositions = [-9, -3, 3, 9];
+      const zPositions = [-2, -4, -4, -2];
+      const rotYPositions = [0.25, 0.08, -0.08, -0.25]; // Face towards center
+
+      const baseX = xPositions[categoryIndex];
+      const baseY = 6.5; // High above the main chart
+      const baseZ = zPositions[categoryIndex];
+
+      // Stack going upwards, rightwards, and backwards to ensure visibility
+      const stackX = inactiveIndex * 0.15;
+      const stackY = inactiveIndex * 0.15;
+      const stackZ = inactiveIndex * -0.3;
 
       targetPosition.set(
-        xCenter + Math.sin(angle) * radius,
-        4 + Math.abs(staggerOffset) * 0.6, // V-shape staging per cluster
-        -Math.cos(angle) * radius + 4 // Arc depth
+        baseX + stackX,
+        baseY + stackY,
+        baseZ + stackZ
       );
       
-      // Face towards the center of the arc (-angle makes it face inward)
-      targetRotation.set(0, -angle, 0);
+      // Face towards the center
+      targetRotation.set(0, rotYPositions[categoryIndex], 0);
       
       baseScale = 0.4;
       targetOpacity = hovered ? 1 : 0.6;
@@ -489,6 +499,7 @@ export function ArtifactBoard({ artifact, isActive, inactiveIndex, onClick, stra
                 isActive={isActive}
                 isExpanded={expanded}
                 onToggleExpand={() => setIsExpanded(!isExpanded)}
+                boardWidth={targetWidth}
                 boardHeight={targetHeight}
                 theme={theme}
               />
